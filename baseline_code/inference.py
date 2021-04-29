@@ -120,9 +120,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--out_path', type=str, default="./submission/submission.csv")
-    parser.add_argument('--model_type', type=str, default='DeepLabV3Plus')
-    parser.add_argument('--backbone', type=str, default='resnext50_32x4d')
-    parser.add_argument('--pretrained_weight', type=str, default='swsl')
+    parser.add_argument('--model_type', type=str, default='Unet')
+    parser.add_argument('--backbone', type=str, default='efficientnet-b0')
+    parser.add_argument('--pretrained_weight', type=str, default='imagenet')
     
     args = parser.parse_args()
     print(args)
