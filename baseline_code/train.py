@@ -120,7 +120,7 @@ def train(args):
     ])
 
     val_transform = A.Compose([
-        A.Resize(384, 384, p=1.0),
+        A.Resize(256, 256, p=1.0),
         A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), max_pixel_value=255.0, p=1.0),
         ToTensorV2(transpose_mask=True, p=1.0),
     ])
