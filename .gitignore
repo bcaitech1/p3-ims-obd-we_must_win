@@ -1,0 +1,15 @@
+# files.
+log.out
+notebook_server
+neptune_config.py
+*pth
+
+# dirs.
+.empty/
+.neptune/
+.vscode/
+__pycache__/
+etc/
+input/
+outputs/
+code/builder/lib/
