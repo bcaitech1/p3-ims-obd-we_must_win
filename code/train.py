@@ -1,11 +1,8 @@
 import os
 import json
-
-import numpy as np
-import albumentations as A
+import argparse
 
 import torch
-from torch.utils.data import DataLoader
 
 from Trainer import Trainer
 from dataset import CocoDataset
@@ -19,45 +16,7 @@ fix_random_seed(seed=42)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def train():
-    CONFIGS = {
-        # Model configs.
-        "MODEL_NAME": "HRNet",
-        "MODEL_PARAMS": {
-            "cfg_path": "code/builder/seg_hrnet_w48_520x520_ohem_sgd_lr1e-3_wd1e-4_bs_16_epoch110.yaml",
-            "pth_path": "code/builder/seg_hrnet_w48_520x520_ohem_sgd_lr1e-3_wd1e-4_bs_16_epoch110.pth",
-            "classes": 12,
-        },
-        # Criterion configs.
-        "CRITERION_NAME": "CrossEntropyLoss",
-        "CRITERION_PARAMS": {
-            # "thres": 0.9,
-            # "min_kept": 131072,
-        },
-        # Optimizer configs.
-        "OPTIMIZER_NAME": "SGD",
-        "OPTIMIZER_PARAMS": {
-            "lr": 0.001,
-            "weight_decay": 0.0001,
-        },
-        # Scheduler configs.
-        "SCHEDULER_NAME": "MultiStepLR",
-        "SCHEDULER_PARAMS": {"milestones": [5, 10, 15, 20, 25], "gamma": 0.4},
-        "SCHEDULER_STEP_TYPE": "epoch",
-        # Data configs.
-        "INPUT_SIZE": (256, 256),
-        "NORM_MEAN": [0.485, 0.456, 0.406],
-        "NORM_STD": [0.229, 0.224, 0.225],
-        "AUGMENTATION": [
-        ],
-        # Training configs.
-        "EPOCH_NUM": 30,
-        "BATCH_SIZE": 32,
-        "K-FOLD_NUM": 0,
-        "EARLY_STOP_NUM": 5,
-        "EARLY_STOP_TARGET": "mIoU",
-    }
-
+def train(CONFIGS):
     # neptune.
     neptune_run = neptune.init(project="hangjoo/PSTAGE-3", api_token=neptune_config.token, source_files=["code/*.py"],)
     neptune_run["CONFIGS"] = CONFIGS
@@ -135,4 +94,11 @@ def train():
 
 
 if __name__ == "__main__":
-    train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type="str", default="code/default_configs.json")
+    args = parser.parse_args()
+
+    with open(args.config, "r") as config_f:
+        CONFIGS = json.load(config_f)
+
+    train(CONFIGS)

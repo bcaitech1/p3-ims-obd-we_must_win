@@ -6,13 +6,14 @@ from torch.optim import Adam, SGD, AdamW
 from madgrad import MADGRAD
 from adamp import AdamP, SGDP
 
-import cv2
 import albumentations as A
 
 from torch.optim.lr_scheduler import CosineAnnealingLR, StepLR, MultiStepLR
 
-from builder.criterions import FocalLoss, LabelSmoothingLoss, OhemCrossEntropy
 from builder.models import HRNet
+from builder.criterions import FocalLoss, LabelSmoothingLoss, OhemCrossEntropy
+from builder.optimizers import RAdam
+from builder.transforms import GridMask
 
 model_list = {
     "Unet": smp.Unet,
@@ -39,6 +40,7 @@ optimizer_list = {
     "AdamP": AdamP,
     "SGDP": SGDP,
     "AdamW": AdamW,
+    "RAdam": RAdam,
 }
 
 scheduler_list = {
@@ -48,16 +50,11 @@ scheduler_list = {
 }
 
 transform_list = {
-    "nothing": A.Compose([A.NoOp()]),
-    "Resize_256": A.Compose([A.Resize(256, 256, interpolation=cv2.INTER_AREA, always_apply=True)]),
-    "Resize_384": A.Compose([A.Resize(384, 384, interpolation=cv2.INTER_AREA, always_apply=True)]),
-    "RandomCrop_256": A.Compose([A.RandomCrop(256, 256, always_apply=True)]),
-    "RandomCrop_384": A.Compose([A.RandomCrop(384, 384, always_apply=True)]),
-    "HorizontalFlip": A.Compose([A.HorizontalFlip(p=1.0)]),
-    "VerticalFlip": A.Compose([A.VerticalFlip(p=1.0)]),
-    "RandomRotate90": A.Compose([A.RandomRotate90(p=1.0)]),
-    "RandomBrightness": A.Compose([A.RandomBrightness(always_apply=True)]),
-    "RandomContrast": A.Compose([A.RandomContrast(always_apply=True)]),
+    "HorizontalFlip": A.HorizontalFlip,
+    "VerticalFlip": A.VerticalFlip,
+    "GridMask": GridMask,
+    "RandomBrightnessContrast": A.RandomBrightnessContrast,
+    "Rotate": A.Rotate,
 }
 
 
@@ -98,14 +95,13 @@ def Scheduler(scheduler_name, *args, **kwargs):
 def Transform(transforms):
     if not transforms:
         return None
-
-    transform_container = []
-    for transform_name in transforms:
-        if isinstance(transform_name, list) or isinstance(transform_name, tuple):
-            list_ = [transform_list[transform_] for transform_ in transform_name]
-            transform_container.append(A.Compose(list_))
+    transform_compose = []
+    for transform in transforms:
+        if hasattr(transform, "__iter__"):
+            trans_list = [eval(transform_ for transform_ in transform)]
+            transform_compose.append(trans_list)
         else:
-            transform_container.append(transform_list[transform_name])
-    transform = A.OneOf(transform_container, p=1.0)
+            transform_compose.append(transform)
+    transform_compose = A.Compose(transform_compose)
 
-    return transform
+    return transform_compose
