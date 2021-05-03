@@ -8,7 +8,7 @@ import os
 import pandas as pd
 
 
-def main():
+def parse():
     parser = argparse.ArgumentParser()
     parser.add_argument("--use_lib", type=bool, default=True, help="use segmentation_models_pytorch(default:True)")
     parser.add_argument("--architecture", type=str, default="DeepLabV3Plus", help="segmentation architecture")
@@ -25,25 +25,24 @@ def main():
     parser.add_argument("--width", type=int, default=256, help="resize width")
     parser.add_argument("--height", type=int, default=256, help="resize height")
     parser.add_argument("--id", type=int, default=0)
+    parser.add_argument("--scheduler", type=int, default=0)
+    parser.add_argument("--optimizer", type=int, default=0)
     args = parser.parse_args()
+    return args
 
+
+def main():
+    args = parse()
     device = set_device()
     set_seed(args.seed)
-
-    if args.use_lib:
-        model = get_model(args.architecture, args.backbone, args.backbone_weight).to(device)
-    else:
-        # SWIM 구현 후 변경 예정
-        model = get_model(args.architecture, args.backbone, args.backbone_weight).to(device)
-
-    best_iou, best_loss = trainer(args, model, device)
-    inference(args, model, device)
-    fields = ["architecture", "backbone", "lr", "batch_size", "aug_option",  "best_iou", "best_loss"]
+    best_iou = trainer(args, device)
+    inference(args, device)
+    fields = ["architecture", "backbone", "lr", "batch_size", "aug_option",  "best_iou"]
     if not os.path.exists("log.csv"):
-        data = [(args.architecture, args.backbone, args.lr, args.batch_size, args.transform, best_iou, best_loss)]
+        data = [(args.architecture, args.backbone, args.lr, args.batch_size, args.transform, best_iou)]
         df = pd.DataFrame(data, columns=fields)
     else:
-        data = [args.architecture, args.backbone, args.lr, args.batch_size, args.transform, best_iou, best_loss]
+        data = [args.architecture, args.backbone, args.lr, args.batch_size, args.transform, best_iou]
         df = pd.read_csv("log.csv")
         df = df.append(pd.Series(data, index=df.columns), ignore_index=True)
     df.to_csv("log.csv", index=False)

@@ -56,15 +56,43 @@ class MyDataset(Dataset):
         return image, mask
 
 
-def get_loader(batch_size, trans_option, width, height):
+class CsvDataset(Dataset):
+    """
+    only train
+    """
+    def __init__(self, data_frame, data_path="/opt/ml/input/data", transform=None):
+        super().__init__()
+        self.data_path = data_path
+        self.transform = transform
+        self.dataframe = data_frame
+
+    def __len__(self):
+        return len(self.dataframe)
+
+    def __getitem__(self, idx):
+        image_path = self.dataframe.iloc[idx]["file_path"]
+        mask = self.dataframe.iloc[idx]["mask"]
+        image = cv2.imread(os.path.join(self.data_path, image_path))
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
+        if self.transform:
+            trans = self.transform(image=image, mask=mask)
+            image = trans["image"]
+            mask = trans["mask"]
+        return image, mask
+
+
+def get_loader(batch_size, trans_option, width, height, train_info=None, valid_info=None, isfold=False):
     class_dict = make_class_dict()
     val_transform = A.Compose([A.Resize(width, height),
                                A.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
                                ToTensorV2()])
     train_transform = get_trans(trans_option, width, height)
-    val_dataset = MyDataset(file_name="val.json", class_dict=class_dict, transform=val_transform)
-    train_dataset = MyDataset(file_name="train.json", class_dict=class_dict, transform=train_transform)
-
+    if isfold:
+        val_dataset = CsvDataset(valid_info, transform=val_transform)
+        train_dataset = CsvDataset(train_info, transform=train_transform)
+    else:
+        val_dataset = MyDataset(file_name="val.json", class_dict=class_dict, transform=val_transform)
+        train_dataset = MyDataset(file_name="train.json", class_dict=class_dict, transform=train_transform)
     train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
     val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
     return train_loader, val_loader
@@ -115,5 +143,11 @@ def get_trans(option, width, height):
                           A.HorizontalFlip(),
                           A.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
                           ToTensorV2()])
-
+    if option == 9:
+        return A.Compose([A.Resize(width, height),
+                          A.Rotate(),
+                          A.RandomGridShuffle(),
+                          A.HorizontalFlip(),
+                          A.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+                          ToTensorV2()])
 
