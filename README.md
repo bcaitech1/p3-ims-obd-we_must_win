@@ -58,7 +58,7 @@
     ```
 
     ```python
-    model = Model("DeepLabV3+", encoder_name="resnext101_32x16d", "encoder_weights"="swsl", "classes"=12)
+    model = Model("DeepLabV3+", encoder_name="resnext101_32x16d", encoder_weights="swsl", classes=12)
     ```
 
     `AUGMENTATION` : Augmentation을 정의하는 문자열 혹은 문자열 리스트가 가능합니다. 아래와 같은 AUGMENTATION 인자는 아래 코드와 같이 생성됩니다.
