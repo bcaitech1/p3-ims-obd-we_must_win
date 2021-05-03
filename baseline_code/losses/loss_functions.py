@@ -128,7 +128,6 @@ class CEDiceLoss(DiceLoss):
     def __init__(self, mode):
         super().__init__(mode)
         self.ce = nn.CrossEntropyLoss()
-        self.
 
     def forward(self, y_pred, y_true):
         dice = super().forward(y_pred, y_true)
