@@ -98,10 +98,10 @@ def Transform(transforms):
     transform_compose = []
     for transform in transforms:
         if hasattr(transform, "__iter__"):
-            trans_list = [eval(transform_ for transform_ in transform)]
-            transform_compose.append(trans_list)
+            trans_list = [eval(transform_) for transform_ in transform]
+            transform_compose.append(A.Compose(trans_list))
         else:
-            transform_compose.append(transform)
-    transform_compose = A.Compose(transform_compose)
+            transform_compose.append(eval(transform))
+    transform_compose = A.OneOf(transform_compose)
 
     return transform_compose

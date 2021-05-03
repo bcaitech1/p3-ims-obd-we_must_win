@@ -95,7 +95,7 @@ def train(CONFIGS):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type="str", default="code/default_configs.json")
+    parser.add_argument("--config", type=str, default="code/default_configs.json")
     args = parser.parse_args()
 
     with open(args.config, "r") as config_f:
