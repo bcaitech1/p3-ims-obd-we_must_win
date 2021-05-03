@@ -124,15 +124,16 @@ class DiceLoss(_Loss):
         return loss.mean()
 
 
-class BCEDiceLoss(DiceLoss):
+class CEDiceLoss(DiceLoss):
     def __init__(self, mode):
         super().__init__(mode)
-        self.bce = nn.CrossEntropyLoss()
+        self.ce = nn.CrossEntropyLoss()
+        self.
 
     def forward(self, y_pred, y_true):
         dice = super().forward(y_pred, y_true)
-        bce = self.bce(y_pred, y_true)
-        return (0.6*bce) + (0.4*dice)
+        ce = self.ce(y_pred, y_true)
+        return (0.6*ce) + (0.4*dice)
 
 
 # class LabelSmoothingLoss(nn.Module):
