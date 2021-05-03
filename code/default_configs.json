@@ -1,0 +1,43 @@
+{
+    "MODEL_NAME": "DeepLabV3+",
+    "MODEL_PARAMS": {
+        "encoder_name": "resnext101_32x16d",
+        "encoder_weights": "swsl",
+        "classes": 12
+    },
+    "CRITERION_NAME": "CrossEntropyLoss",
+    "CRITERION_PARAMS": {},
+    "OPTIMIZER_NAME": "Adam",
+    "OPTIMIZER_PARAMS": {
+        "lr": 0.001,
+        "weight_decay": 0.0001
+    },
+    "SCHEDULER_NAME": "MultiStepLR",
+    "SCHEDULER_PARAMS": {
+        "milestones": [5, 10, 15, 20, 25],
+        "gamma": 0.4
+    },
+    "SCHEDULER_STEP_TYPE": "epoch",
+    "INPUT_SIZE": [
+        256,
+        256
+    ],
+    "NORM_MEAN": [
+        0.485,
+        0.456,
+        0.406
+    ],
+    "NORM_STD": [
+        0.229,
+        0.224,
+        0.225
+    ],
+    "AUGMENTATION": [
+        ["A.Rotate(limit=45)", "A.GridDropout(ratio=0.25)", "A.RandomBrightnessContrast()"]
+    ],
+    "EPOCH_NUM": 30,
+    "BATCH_SIZE": 32,
+    "K-FOLD_NUM": 0,
+    "EARLY_STOP_NUM": 5,
+    "EARLY_STOP_TARGET": "mIoU"
+}
