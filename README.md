@@ -73,7 +73,7 @@
 
     ```json
     "AUGMENTATION": [
-        "A.NoOp"
+        "A.NoOp()"
         ["A.Rotate(limit=45)", "A.GridDropout(ratio=0.25)", "A.RandomBrightnessContrast()"],
         "A.Resize(height=256, width=256)"
     ]
@@ -94,6 +94,8 @@
     `EARLY_STOP_NUM` : 학습 시 Early Stop에 대한 Threshold 값입니다. 해당 인자 값만큼 Target Value가 갱신되지 않을 경우 학습이 종료됩니다.
 
     `EARLY_STOP_TARGET` : Early Stop을 위한 갱신 Target Value 입니다. "loss" 혹은 "mIoU"로 설정할 수 있습니다.
+
+    `GRADIENT_ACCUMULATE_STEP' : 설정시 Gradient를 누적하고 있다가 GRADIENT_ACCUMULATE_STEP의 step 마다 parameter optimization이 적용됩니다.
 
     
 
