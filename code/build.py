@@ -51,14 +51,6 @@ scheduler_list = {
     "MultiStepLR": MultiStepLR,
 }
 
-transform_list = {
-    "HorizontalFlip": A.HorizontalFlip,
-    "VerticalFlip": A.VerticalFlip,
-    "GridMask": GridMask,
-    "RandomBrightnessContrast": A.RandomBrightnessContrast,
-    "Rotate": A.Rotate,
-}
-
 
 def Model(model_name, *args, **kwargs):
     if model_name in model_list.keys():

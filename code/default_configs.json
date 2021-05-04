@@ -1,13 +1,10 @@
 {
-    "MODEL_NAME": "DeepLabV3+",
+    "MODEL_NAME": "SwinTransformerBase",
     "MODEL_PARAMS": {
-        "encoder_name": "resnet101",
-        "encoder_weights": "imagenet",
-        "classes": 12
     },
     "CRITERION_NAME": "CrossEntropyLoss",
     "CRITERION_PARAMS": {},
-    "OPTIMIZER_NAME": "AdamP",
+    "OPTIMIZER_NAME": "RAdam",
     "OPTIMIZER_PARAMS": {},
     "SCHEDULER_NAME": "StepLR",
     "SCHEDULER_PARAMS": {
@@ -31,10 +28,11 @@
     ],
     "AUGMENTATION": [
     ],
-    "LEARNING_RATE": {"encoder": 3e-4, "decoder": 5e-3},
+    "LEARNING_RATE": 1e-4,
     "EPOCH_NUM": 100,
-    "BATCH_SIZE": 32,
+    "BATCH_SIZE": 16,
     "K-FOLD_NUM": 0,
     "EARLY_STOP_NUM": 10,
-    "EARLY_STOP_TARGET": "mIoU"
+    "EARLY_STOP_TARGET": "mIoU",
+    "GRADIENT_ACCUMULATE_STEP": 4
 }

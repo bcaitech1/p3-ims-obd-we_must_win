@@ -16,15 +16,7 @@ def collate_fn(batch):
 
 
 class Trainer:
-    def __init__(
-        self,
-        model,
-        criterion,
-        optimizer,
-        scheduler,
-        save_path,
-        neptune_run=None
-    ):
+    def __init__(self, model, criterion, optimizer, scheduler, save_path, neptune_run=None):
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
@@ -42,6 +34,7 @@ class Trainer:
         early_stop_num=0,
         early_stop_target="mIoU",
         scheduler_step_type="batch",
+        gradient_accumulate_step=1,
     ):
         print("\033[31m" + "[ TRAINING START ]" + "\033[0m")
 
@@ -50,7 +43,7 @@ class Trainer:
             train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=collate_fn)
             valid_loader = DataLoader(valid_data, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=collate_fn)
             data_loader = {"train": train_loader, "valid": valid_loader}
-            self.train_(epoch_num, data_loader, early_stop_num, early_stop_target, scheduler_step_type)
+            self.train_(epoch_num, data_loader, early_stop_num, early_stop_target, scheduler_step_type, gradient_accumulate_step)
 
         # K-Fold Training.
         elif isinstance(train_data, list) and isinstance(valid_data, list):
@@ -62,15 +55,27 @@ class Trainer:
         else:
             raise Exception("Input train_data, valid_data are of the wrong type. Must be list or single of torch Dataset Class.")
 
-    def train_(self, epoch_num, data_loader, early_stop_num, early_stop_target, scheduler_step_type):
+    def train_(self, epoch_num, data_loader, early_stop_num, early_stop_target, scheduler_step_type, gradient_accumulate_step):
         best_loss = np.inf
         best_mIoU = 0
         early_stop_counter = 0
         for epoch_idx in range(1, epoch_num + 1):
             epoch_time = time.time()
 
-            t_e_result = self.step_(is_train=True, step_idx=epoch_idx, data_loader=data_loader["train"], scheduler_step_type=scheduler_step_type)
-            v_e_result = self.step_(is_train=False, step_idx=epoch_idx, data_loader=data_loader["valid"], scheduler_step_type=scheduler_step_type)
+            t_e_result = self.step_(
+                is_train=True,
+                step_idx=epoch_idx,
+                data_loader=data_loader["train"],
+                scheduler_step_type=scheduler_step_type,
+                gradient_accumulate_step=gradient_accumulate_step,
+            )
+            v_e_result = self.step_(
+                is_train=False,
+                step_idx=epoch_idx,
+                data_loader=data_loader["valid"],
+                scheduler_step_type=scheduler_step_type,
+                gradient_accumulate_step=gradient_accumulate_step,
+            )
             self.save_samples_(step_idx=epoch_idx, data_loader=data_loader["valid"], n_samples=3)
 
             if self.scheduler is not None and scheduler_step_type == "batch":
@@ -110,7 +115,7 @@ class Trainer:
                 print("    -> Early Stopped.")
                 return
 
-    def step_(self, is_train, step_idx, data_loader, scheduler_step_type):
+    def step_(self, is_train, step_idx, data_loader, scheduler_step_type, gradient_accumulate_step=1):
         loss_hist = []
         miou_hist = []
 
@@ -118,6 +123,7 @@ class Trainer:
             self.model.train()
         else:
             self.model.eval()
+        self.optimizer.zero_grad()
 
         with torch.set_grad_enabled(is_train):
             for iter_idx, (images, masks, _) in enumerate(data_loader, 1):
@@ -127,10 +133,10 @@ class Trainer:
                 outputs = self.model(images)
                 loss = self.criterion(outputs, masks)
 
-                if is_train:
-                    self.optimizer.zero_grad()
+                if is_train and iter_idx % gradient_accumulate_step == 0:
                     loss.backward()
                     self.optimizer.step()
+                    self.optimizer.zero_grad()
                     if self.scheduler is not None and scheduler_step_type == "batch":
                         self.scheduler.step()
 

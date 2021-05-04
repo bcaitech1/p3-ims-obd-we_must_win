@@ -100,6 +100,7 @@ def train(CONFIGS):
         early_stop_num=CONFIGS["EARLY_STOP_NUM"],
         early_stop_target=CONFIGS["EARLY_STOP_TARGET"],
         scheduler_step_type=CONFIGS["SCHEDULER_STEP_TYPE"],
+        gradient_accumulate_step=CONFIGS["GRADIENT_ACCUMULATE_STEP"],
     )
 
 
