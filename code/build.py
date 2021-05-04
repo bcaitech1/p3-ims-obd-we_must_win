@@ -10,18 +10,20 @@ import albumentations as A
 
 from torch.optim.lr_scheduler import CosineAnnealingLR, StepLR, MultiStepLR
 
-from builder.models import HRNet
-from builder.criterions import FocalLoss, LabelSmoothingLoss, OhemCrossEntropy
+from builder.models import HRNet, SwinTransformerBase
+from builder.criterions import FocalLoss, LabelSmoothingLoss, DiceLossWithCEE
 from builder.optimizers import RAdam
 from builder.transforms import GridMask
 
 model_list = {
     "Unet": smp.Unet,
+    "Unet++": smp.UnetPlusPlus,
     "FPN": smp.FPN,
     "DeepLabV3": smp.DeepLabV3,
     "DeepLabV3+": smp.DeepLabV3Plus,
     "PAN": smp.PAN,
     "HRNet": HRNet,
+    "SwinTransformerBase": SwinTransformerBase
 }
 
 criterion_list = {
@@ -30,7 +32,7 @@ criterion_list = {
     "FocalLoss": FocalLoss,
     "KLDiv": nn.KLDivLoss,
     "LabelSmoothingLoss": LabelSmoothingLoss,
-    "OhemCrossEntropy": OhemCrossEntropy,
+    "DiceLossWithCEE": DiceLossWithCEE
 }
 
 optimizer_list = {
@@ -97,7 +99,7 @@ def Transform(transforms):
         return None
     transform_compose = []
     for transform in transforms:
-        if hasattr(transform, "__iter__"):
+        if isinstance(transform, list):
             trans_list = [eval(transform_) for transform_ in transform]
             transform_compose.append(A.Compose(trans_list))
         else:

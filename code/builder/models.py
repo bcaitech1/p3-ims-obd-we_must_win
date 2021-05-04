@@ -1,9 +1,15 @@
+import os
+
+import torch
+
 import torch.nn as nn
 
-from lib.models.seg_hrnet import get_seg_model
-from lib.models.seg_hrnet_ocr import get_seg_model as get_seg_ocr_model
-from lib.config import config
-# from lib.config.hrnet_config import MODEL_CONFIGS
+from HRNet.models.seg_hrnet import get_seg_model
+# from HRNet.models.seg_hrnet_ocr import get_seg_model as get_seg_ocr_model
+from HRNet.config import config
+
+from mmcv.utils import Config
+from SwinTransformers.mmseg.models import build_segmentor
 
 
 class HRNet(nn.Module):
@@ -29,13 +35,59 @@ class HRNet(nn.Module):
         return seg_out
 
 
-# TODO: Not implemented yet.
-def HRNet_OCR(cfg_path, pth_path, classes=12):
-    config.merge_from_file(cfg_path)
-    config.MODEL.PRETRAINED = pth_path
-    model = get_seg_ocr_model(config)
+class SwinTransformerBase(nn.Module):
+    def __init__(self, model_size="base"):
+        super().__init__()
+        model_config_py = os.path.join(os.path.dirname(__file__), f"SwinTransformers/config/swin/upernet_swin_{model_size}_patch4_window7_512x512_160k_ade20k.py")
+        tmp = Config.fromfile(model_config_py)
+        model = build_segmentor(tmp.model,)
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        checkpoints = torch.load(os.path.join(os.path.dirname(__file__), f"SwinTransformers/upernet_swin_{model_size}_patch4_window7_512x512.pth"), map_location=device)
 
-    model.ocr_distri_head.cls_head = nn.Conv2d(512, classes, kernel_size=(1, 1), stride=(1, 1))
-    model.ocr_distri_head.aux_head[3] = nn.Conv2d(720, classes, kernel_size=(1, 1), stride=(1, 1))
+        model.load_state_dict(checkpoints["state_dict"])
+        self.model = model
+        self.model.decode_head.conv_seg = nn.Conv2d(512, 12, kernel_size=(1, 1), stride=(1, 1))
+        self.model.auxiliary_head.conv_seg = nn.Conv2d(256, 12, kernel_size=(1, 1), stride=(1, 1))
 
-    return model
+        # swith synbatch to batch ( single gpu training )
+        self.synbatch2batch()
+
+    def forward(self, x):
+        y = self.model.encode_decode(x, None)
+        return y
+
+    def synbatch2batch(self):
+        for i in range(len(self.model.decode_head.lateral_convs)):
+            synbatch = self.model.decode_head.lateral_convs[i].bn
+            batch = nn.BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            batch.weight = synbatch.weight
+            batch.bias = synbatch.bias
+            self.model.decode_head.lateral_convs[i].bn = batch
+
+        for i in range(len(self.model.decode_head.psp_modules)):
+            synbatch = self.model.decode_head.psp_modules[i][1].bn
+            batch = nn.BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            batch.weight = synbatch.weight
+            batch.bias = synbatch.bias
+            self.model.decode_head.psp_modules[i][1].bn = batch
+
+        for i in range(len(self.model.decode_head.fpn_convs)):
+            synbatch = self.model.decode_head.fpn_convs[i].bn
+            batch = nn.BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            batch.weight = synbatch.weight
+            batch.bias = synbatch.bias
+            self.model.decode_head.fpn_convs[i].bn = batch
+
+        self.model.decode_head.bottleneck.bn
+        synbatch = self.model.decode_head.bottleneck.bn
+        batch = nn.BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        batch.weight = synbatch.weight
+        batch.bias = synbatch.bias
+        self.model.decode_head.bottleneck.bn = batch
+
+        self.model.decode_head.fpn_bottleneck.bn
+        synbatch = self.model.decode_head.fpn_bottleneck.bn
+        batch = nn.BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        batch.weight = synbatch.weight
+        batch.bias = synbatch.bias
+        self.model.decode_head.fpn_bottleneck.bn = batch

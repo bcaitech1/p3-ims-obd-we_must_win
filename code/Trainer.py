@@ -153,7 +153,7 @@ class Trainer:
         os.makedirs(os.path.join(self.save_path, f"epoch_{step_idx}_samples"))
 
         sample_idx = np.random.choice(len(data_loader.dataset), n_samples)
-        sample_images, ground_truths, _ = data_loader.dataset[sample_idx]
+        sample_images, ground_truths, image_infos = data_loader.dataset[sample_idx]
 
         norm_mean = data_loader.dataset.normalizer.transforms.transforms[0].mean
         norm_std = data_loader.dataset.normalizer.transforms.transforms[0].std
@@ -163,7 +163,7 @@ class Trainer:
             predicts = torch.argmax(predicts, dim=1)
             predicts = predicts.cpu().numpy()  # predicted mask images. (n_samples, height, width)
 
-            for iter_idx, (image, predict, gt) in enumerate(zip(sample_images, predicts, ground_truths)):
+            for iter_idx, (image, predict, gt, image_info) in enumerate(zip(sample_images, predicts, ground_truths, image_infos)):
                 # restore normalized image.
                 image = image.numpy().transpose(1, 2, 0)
                 image = (image * norm_std) + norm_mean
@@ -175,7 +175,7 @@ class Trainer:
 
                 plt.subplot(1, 3, 1)
                 plt.axis("off")
-                plt.title("Original Image")
+                plt.title(f"{image_info['file_name']}")
                 plt.imshow(image)
 
                 plt.subplot(1, 3, 2)
@@ -190,5 +190,6 @@ class Trainer:
 
                 fig_path = os.path.join(self.save_path, f"epoch_{step_idx}_samples", f"sample_image_{iter_idx}.jpg")
                 plt.savefig(fig_path)
+                plt.close("all")
 
                 print(f"[Epoch {step_idx}] saving sample images iteration - {iter_idx}/{len(data_loader)}" + " " * 10, end="\r")

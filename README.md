@@ -18,16 +18,16 @@
         "PAN": smp.PAN,
         "HRNet": HRNet,
     }
-    
+
     criterion_list = {
-        "CrossEntropyLoss": nn.CrossEntropyLoss,
-        "MSE": nn.MSELoss,
-        "FocalLoss": FocalLoss,
-        "KLDiv": nn.KLDivLoss,
-        "LabelSmoothingLoss": LabelSmoothingLoss,
-        "OhemCrossEntropy": OhemCrossEntropy,
+    "CrossEntropyLoss": nn.CrossEntropyLoss,
+    "MSE": nn.MSELoss,
+    "FocalLoss": FocalLoss,
+    "KLDiv": nn.KLDivLoss,
+    "LabelSmoothingLoss": LabelSmoothingLoss,
+    "DiceLossWithCEE": DiceLossWithCEE
     }
-    
+
     optimizer_list = {
         "Adam": Adam,
         "SGD": SGD,
@@ -37,11 +37,19 @@
         "AdamW": AdamW,
         "RAdam": RAdam,
     }
-    
+
     scheduler_list = {
         "CosineAnnealingLR": CosineAnnealingLR,
         "StepLR": StepLR,
         "MultiStepLR": MultiStepLR,
+    }
+
+    transform_list = {
+        "HorizontalFlip": A.HorizontalFlip,
+        "VerticalFlip": A.VerticalFlip,
+        "GridMask": GridMask,
+        "RandomBrightnessContrast": A.RandomBrightnessContrast,
+        "Rotate": A.Rotate,
     }
     ```
 

@@ -75,7 +75,17 @@ def train(CONFIGS):
     criterion = Criterion(criterion_name=CONFIGS["CRITERION_NAME"], **CONFIGS["CRITERION_PARAMS"]).to(device)
 
     # optimizer.
-    optimizer = Optimizer(optimizer_name=CONFIGS["OPTIMIZER_NAME"], params=model.parameters(), **CONFIGS["OPTIMIZER_PARAMS"])
+    if isinstance(CONFIGS["LEARNING_RATE"], dict):
+        params = []
+        for arc, lr in CONFIGS["LEARNING_RATE"].items():
+            arc_cfg = {
+                "params": getattr(model, arc).parameters(),
+                "lr": lr
+            }
+            params.append(arc_cfg)
+        optimizer = Optimizer(optimizer_name=CONFIGS["OPTIMIZER_NAME"], params=params, **CONFIGS["OPTIMIZER_PARAMS"])
+    else:
+        optimizer = Optimizer(optimizer_name=CONFIGS["OPTIMIZER_NAME"], params=model.parameters(), lr=CONFIGS["LEARNING_RATE"], **CONFIGS["OPTIMIZER_PARAMS"])
 
     # scheduler.
     scheduler = Scheduler(scheduler_name=CONFIGS["SCHEDULER_NAME"], optimizer=optimizer, **CONFIGS["SCHEDULER_PARAMS"])

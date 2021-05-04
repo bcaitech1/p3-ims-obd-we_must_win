@@ -2,7 +2,24 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from lib.config import config
+from segmentation_models_pytorch.losses import DiceLoss
+
+
+class DiceLossWithCEE(nn.Module):
+    def __init__(self, dice_w=0.5, cee_w=0.5, mode="multiclass", log_loss=False, reduction="mean"):
+        super(DiceLossWithCEE, self).__init__()
+
+        self.lambda_1 = dice_w
+        self.lambda_2 = cee_w
+
+        self.dice_loss = DiceLoss(mode=mode)
+        self.cee_loss = nn.CrossEntropyLoss(reduction=reduction)
+
+    def forward(self, pred, target):
+        dice_out = self.dice_loss(pred, target)
+        cee_out = self.cee_loss(pred, target)
+
+        return (self.lambda_1 * dice_out) + (self.lambda_2 * cee_out)
 
 
 class FocalLoss(nn.Module):
@@ -34,53 +51,3 @@ class LabelSmoothingLoss(nn.Module):
             true_dist.scatter_(1, target.data.unsqueeze(1), self.confidence)
 
         return torch.mean(torch.sum(-true_dist * pred, dim=self.dim))
-
-
-class OhemCrossEntropy(nn.Module):
-    def __init__(self, ignore_label=-1, thres=0.7, min_kept=100000, weight=None):
-        super(OhemCrossEntropy, self).__init__()
-        self.thresh = thres
-        self.min_kept = max(1, min_kept)
-        self.ignore_label = ignore_label
-        self.criterion = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_label, reduction="none")
-
-    def _ce_forward(self, score, target):
-        ph, pw = score.size(2), score.size(3)
-        h, w = target.size(1), target.size(2)
-        if ph != h or pw != w:
-            score = F.interpolate(input=score, size=(h, w), mode="bilinear", align_corners=config.MODEL.ALIGN_CORNERS)
-
-        loss = self.criterion(score, target)
-
-        return loss
-
-    def _ohem_forward(self, score, target, **kwargs):
-        ph, pw = score.size(2), score.size(3)
-        h, w = target.size(1), target.size(2)
-        if ph != h or pw != w:
-            score = F.interpolate(input=score, size=(h, w), mode="bilinear", align_corners=config.MODEL.ALIGN_CORNERS)
-        pred = F.softmax(score, dim=1)
-        pixel_losses = self.criterion(score, target).contiguous().view(-1)
-        mask = target.contiguous().view(-1) != self.ignore_label
-
-        tmp_target = target.clone()
-        tmp_target[tmp_target == self.ignore_label] = 0
-        pred = pred.gather(1, tmp_target.unsqueeze(1))
-        pred, ind = pred.contiguous().view(-1,)[mask].contiguous().sort()
-        min_value = pred[min(self.min_kept, pred.numel() - 1)]
-        threshold = max(min_value, self.thresh)
-
-        pixel_losses = pixel_losses[mask][ind]
-        pixel_losses = pixel_losses[pred < threshold]
-        return pixel_losses.mean()
-
-    def forward(self, score, target):
-
-        if config.MODEL.NUM_OUTPUTS == 1:
-            score = [score]
-
-        weights = config.LOSS.BALANCE_WEIGHTS
-        assert len(weights) == len(score)
-
-        functions = [self._ce_forward] * (len(weights) - 1) + [self._ohem_forward]
-        return sum([w * func(x, target) for (w, x, func) in zip(weights, score, functions)])

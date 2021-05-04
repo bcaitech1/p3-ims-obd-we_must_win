@@ -1,5 +1,6 @@
 import os
 import json
+import argparse
 
 import numpy as np
 import pandas as pd
@@ -20,9 +21,12 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 
-def inference():
-    output_id = "PST-53"
-    score_type = "mIoU"
+def inference(args):
+    output_id = "PST-" + args.id
+    score_type = args.score
+
+    if not output_id:
+        raise Exception("Experiment id must be specified.")
 
     save_path = os.path.join("outputs", output_id)
     with open(os.path.join(save_path, "configs.json"), "r") as config_f:
@@ -86,4 +90,9 @@ def inference():
 
 
 if __name__ == "__main__":
-    inference()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--id", type=str, default="")
+    parser.add_argument("--score", type=str, default="mIoU")
+    args = parser.parse_args()
+
+    inference(args)
