@@ -11,6 +11,8 @@ from HRNet.config import config
 from mmcv.utils import Config
 from SwinTransformers.mmseg.models import build_segmentor
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 class HRNet(nn.Module):
     def __init__(self, cfg_path, pth_path, classes=12):
@@ -36,13 +38,11 @@ class HRNet(nn.Module):
 
 
 class SwinTransformerBase(nn.Module):
-    def __init__(self, model_size="base"):
+    def __init__(self, cfg_path, pth_path):
         super().__init__()
-        model_config_py = os.path.join(os.path.dirname(__file__), f"SwinTransformers/config/swin/upernet_swin_{model_size}_patch4_window7_512x512_160k_ade20k.py")
-        tmp = Config.fromfile(model_config_py)
-        model = build_segmentor(tmp.model,)
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        checkpoints = torch.load(os.path.join(os.path.dirname(__file__), f"SwinTransformers/upernet_swin_{model_size}_patch4_window7_512x512.pth"), map_location=device)
+        model_cfg = Config.fromfile(cfg_path)
+        model = build_segmentor(model_cfg.model,)
+        checkpoints = torch.load(pth_path, map_location=device)
 
         model.load_state_dict(checkpoints["state_dict"])
         self.model = model

@@ -40,8 +40,8 @@ class Trainer:
 
         # Basic Training.
         if isinstance(train_data, Dataset) and isinstance(valid_data, Dataset):
-            train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=collate_fn)
-            valid_loader = DataLoader(valid_data, batch_size=batch_size, shuffle=True, num_workers=4, collate_fn=collate_fn)
+            train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=2, collate_fn=collate_fn)
+            valid_loader = DataLoader(valid_data, batch_size=batch_size, shuffle=True, num_workers=2, collate_fn=collate_fn)
             data_loader = {"train": train_loader, "valid": valid_loader}
             self.train_(epoch_num, data_loader, early_stop_num, early_stop_target, scheduler_step_type, gradient_accumulate_step)
 
@@ -131,12 +131,13 @@ class Trainer:
                 masks = torch.stack(masks).to(device)
 
                 outputs = self.model(images)
-                loss = self.criterion(outputs, masks)
+                loss = self.criterion(outputs, masks) / gradient_accumulate_step
 
-                if is_train and iter_idx % gradient_accumulate_step == 0:
+                if is_train:
                     loss.backward()
-                    self.optimizer.step()
-                    self.optimizer.zero_grad()
+                    if iter_idx % gradient_accumulate_step == 0:
+                        self.optimizer.step()
+                        self.optimizer.zero_grad()
                     if self.scheduler is not None and scheduler_step_type == "batch":
                         self.scheduler.step()
 
@@ -144,7 +145,7 @@ class Trainer:
                 ans_masks = masks.detach().cpu().numpy()
                 batch_mIoU = get_mIoU(pred_masks, ans_masks, n_class=12)
 
-                loss_hist.append(loss.item())
+                loss_hist.append(loss.item() * gradient_accumulate_step)
                 miou_hist.extend(batch_mIoU)
                 print(f"[Epoch {step_idx}] {'train' if is_train else 'valid'} iteration - {iter_idx}/{len(data_loader)}" + " " * 10, end="\r")
 

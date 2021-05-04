@@ -1,20 +1,22 @@
 {
     "MODEL_NAME": "SwinTransformerBase",
     "MODEL_PARAMS": {
+        "cfg_path": "code/builder/SwinTransformers/upernet_swin_tiny_patch4_window7_512x512_160k_ade20k.py",
+        "pth_path": "code/builder/SwinTransformers/upernet_swin_tiny_patch4_window7_512x512.pth"
     },
     "CRITERION_NAME": "CrossEntropyLoss",
     "CRITERION_PARAMS": {},
-    "OPTIMIZER_NAME": "RAdam",
+    "OPTIMIZER_NAME": "AdamW",
     "OPTIMIZER_PARAMS": {},
     "SCHEDULER_NAME": "StepLR",
     "SCHEDULER_PARAMS": {
-        "step_size": 20,
+        "step_size": 5,
         "gamma": 0.4
     },
     "SCHEDULER_STEP_TYPE": "epoch",
     "INPUT_SIZE": [
-        256,
-        256
+        512,
+        512
     ],
     "NORM_MEAN": [
         0.485,
@@ -28,11 +30,11 @@
     ],
     "AUGMENTATION": [
     ],
-    "LEARNING_RATE": 1e-4,
+    "LEARNING_RATE": 6e-5,
     "EPOCH_NUM": 100,
     "BATCH_SIZE": 16,
     "K-FOLD_NUM": 0,
     "EARLY_STOP_NUM": 10,
     "EARLY_STOP_TARGET": "mIoU",
-    "GRADIENT_ACCUMULATE_STEP": 4
+    "GRADIENT_ACCUMULATE_STEP": 1
 }
