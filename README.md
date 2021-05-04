@@ -95,7 +95,7 @@
 
     `EARLY_STOP_TARGET` : Early Stop을 위한 갱신 Target Value 입니다. "loss" 혹은 "mIoU"로 설정할 수 있습니다.
 
-    `GRADIENT_ACCUMULATE_STEP' : 설정시 Gradient를 누적하고 있다가 GRADIENT_ACCUMULATE_STEP의 step 마다 parameter optimization이 적용됩니다.
+    `GRADIENT_ACCUMULATE_STEP` : 설정시 Gradient를 누적하고 있다가 GRADIENT_ACCUMULATE_STEP의 step 마다 parameter optimization이 적용됩니다.
 
     
 
