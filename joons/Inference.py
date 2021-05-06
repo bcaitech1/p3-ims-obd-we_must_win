@@ -125,8 +125,8 @@ if __name__ == '__main__':
                                               num_workers=4,
                                               collate_fn=collate_fn)
     inference = infer(model='swin_transformer_small',
-                      save_path='/opt/ml/code/saved/mIoU_swin_small_512_stepRL.pt',
+                      save_path='/opt/ml/code/saved/mIoU_swin_Small_allData.pt',
                       data_loader=test_loader,
                       save_logit= False,
-                      submission_file_name="18th_swin_tiny_512_stepRL_CLAHE")
+                      submission_file_name="24th_swin_Small_512_alldata")
     inference.submission()

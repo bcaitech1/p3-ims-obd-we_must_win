@@ -10,11 +10,28 @@ from torch.optim.lr_scheduler import _LRScheduler
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-def inference_view(model, dataset, idx, result_plot=True,confidence_plot=True): # inference_view
+def inference_view(model, dataset, idx, result_plot=True,confidence_plot=True, ground_truth=False): # inference_view
+    COLORS = [
+        [129, 236, 236],
+        [2, 132, 227],
+        [232, 67, 147],
+        [255, 234, 267],
+        [0, 184, 148],
+        [85, 239, 196],
+        [48, 51, 107],
+        [255, 159, 26],
+        [255, 204, 204],
+        [179, 57, 57],
+        [248, 243, 212],
+    ]
+    COLORS = np.vstack([[0, 0, 0], COLORS]).astype('uint8')
+
     model.to(device)
     category_names = dataset.category_names
-    image, image_infos = dataset[idx]
-
+    if ground_truth:
+        image, gt, image_infos = dataset[idx]
+    else:
+        image, image_infos = dataset[idx]
     model.eval()
     # inference
     outs = model(image.unsqueeze(0).to(device))
@@ -22,22 +39,52 @@ def inference_view(model, dataset, idx, result_plot=True,confidence_plot=True): 
 
 
     if result_plot:
-        fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(16, 16))
+        if ground_truth:
+            fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, figsize=(16, 16))
 
-        print('Shape of Original Image :', list(image.shape))
-        print('Shape of Predicted : ', list(oms.shape))
-        print('Unique values, category of transformed mask : \n',
-              [{i, category_names[int(i)]} for i in list(np.unique(oms))])
+            print('Shape of Original Image :', list(image.shape))
+            print('Shape of Predicted : ', list(oms.shape))
+            print('Unique values, category of transformed mask : \n',
+                  [{i, category_names[int(i)]} for i in list(np.unique(oms))])
+            print('ground Truth',
+                  [{i, category_names[int(i)]} for i in list(np.unique(gt))])
 
-        # Original image
-        ax1.imshow(image.permute([1, 2, 0]))
-        ax1.grid(False)
-        ax1.set_title("Original image : {}".format(image_infos['file_name']), fontsize=15)
+            # Original image
+            ax1.imshow(image.permute([1, 2, 0]))
+            ax1.grid(False)
+            ax1.set_title("Original image : {}".format(image_infos['file_name']), fontsize=15)
 
-        # Predicted
-        ax2.imshow(oms[0])
-        ax2.grid(False)
-        ax2.set_title("Predicted : {}".format(image_infos['file_name']), fontsize=15)
+            # ground_Truth
+            filtered_gt = COLORS[gt.detach().cpu().numpy().astype('int8')]
+            ax2.imshow(filtered_gt)
+            ax2.grid(False)
+            ax2.set_title("ground_Truth : {}".format(image_infos['file_name']), fontsize=15)
+
+            # Predicted
+            filtered_oms = COLORS[oms[0].astype('int8')]
+            ax3.imshow(filtered_oms)
+            ax3.grid(False)
+            ax3.set_title("Predicted : {}".format(image_infos['file_name']), fontsize=15)
+
+
+        else:
+            fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(16, 16))
+
+            print('Shape of Original Image :', list(image.shape))
+            print('Shape of Predicted : ', list(oms.shape))
+            print('Unique values, category of transformed mask : \n',
+                  [{i, category_names[int(i)]} for i in list(np.unique(oms))])
+
+            # Original image
+            ax1.imshow(image.permute([1, 2, 0]))
+            ax1.grid(False)
+            ax1.set_title("Original image : {}".format(image_infos['file_name']), fontsize=15)
+
+            # Predicted
+            filtered_oms = COLORS[gt.detach().cpu().numpy().astype('int8')]
+            ax2.imshow(filtered_oms)
+            ax2.grid(False)
+            ax2.set_title("Predicted : {}".format(image_infos['file_name']), fontsize=15)
 
     if confidence_plot:
         fig, axes = plt.subplots(nrows=3, ncols=4, figsize=(20, 10))

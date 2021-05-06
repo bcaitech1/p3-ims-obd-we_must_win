@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import OneCycleLR, StepLR
 import numpy as np
 import random
 
-from Datasets import RecylceDatasets
+from Datasets import RecylceDatasets, PseudoTrainset
 from Utils import CosineAnnealingWarmupRestarts,label_accuracy_score,add_hist
 
 from Models import *
@@ -22,6 +22,7 @@ def save_model(model, file_name='deeplabv3_resnet101(pretrained)'):
     file_name = file_name + '.pt'
     output_path = os.path.join('/opt/ml/code/saved', file_name)
     torch.save(model.state_dict(), output_path)
+    print('MODEL SAVED!!')
 
 class Trainer():
     def __init__(self,
@@ -36,12 +37,16 @@ class Trainer():
                  test_transform = None,
                  resize = None,
                  scheduler = None,
+                 accumulation_step = None,
+                 print_train_step = 25
                  ):
 
+        self.accumulation_step = accumulation_step
         self.random_seed = random_seed
         self.set_seed(random_seed)
         self.num_epochs = num_epochs
         self.scheduler = scheduler
+        self.print_train_step = print_train_step
 
         if model == 'deeplabv3_resnet101':
             self.model = Deeplabv3ResNet101()
@@ -79,6 +84,7 @@ class Trainer():
         self.optimizer = optimizer(params = self.model.parameters(),
                                    lr = learning_rate,
                                    weight_decay=weight_decay)
+
         if self.scheduler:
             self.scheduler = self.scheduler(optimizer=self.optimizer)
 
@@ -93,9 +99,13 @@ class Trainer():
         self.model.to(self.device)
         best_loss = 9999999
         best_miou = 0.0
+
         for epoch in range(self.num_epochs):
             self.model.train()
-            for step, (images, masks, _) in enumerate(self.train_loader):
+            if self.accumulation_step:
+                self.optimizer.zero_grad()
+
+            for step, (images, masks) in enumerate(self.train_loader):
                 images = torch.stack(images)  # (batch, channel, height, width)
                 masks = torch.stack(masks).long()  # (batch, channel, height, width)
 
@@ -107,14 +117,24 @@ class Trainer():
 
                 # loss 계산 (cross entropy loss)
                 loss = criterion(outputs, masks)
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-                if self.scheduler:
-                    self.scheduler.step()
+
+                if self.accumulation_step:
+                    loss = loss / self.accumulation_step
+                    loss.backward()
+                    if (step+1 % self.accumulation_step == 0) or (step+1 == self.save_step):
+                        self.optimizer.step()
+                        self.optimizer.zero_grad()
+                        if self.scheduler:
+                            self.scheduler.step()
+                else:
+                    self.optimizer.zero_grad()
+                    loss.backward()
+                    self.optimizer.step()
+                    if self.scheduler:
+                        self.scheduler.step()
 
                 # step 주기에 따른 loss 출력
-                if (step + 1) % 25 == 0:
+                if (step + 1) % self.print_train_step == 0:
                     print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(
                         epoch + 1, self.num_epochs, step + 1, self.step_size, loss.item()))
                     if self.scheduler:
@@ -155,7 +175,7 @@ class Trainer():
             total_loss = 0
             cnt = 0
             mIoU_list = []
-            for step, (images, masks, _) in enumerate(self.val_loader):
+            for step, (images, masks) in enumerate(self.val_loader):
                 images = torch.stack(images)  # (batch, channel, height, width)
                 masks = torch.stack(masks).long()  # (batch, channel, height, width)
 
@@ -184,7 +204,8 @@ class Trainer():
 
 
     def get_dataloader(self, train_dir, val_dir): # data_loader
-        train_dataset = RecylceDatasets(train_dir, mode='train', transform=self.train_transform, resize=self.size)
+        # train_dataset = RecylceDatasets(train_dir, mode='train', transform=self.train_transform, resize=self.size)
+        train_dataset = PseudoTrainset(train_dir, transform=self.train_transform, resize=self.size)
         val_dataset = RecylceDatasets(val_dir, mode='val', transform=self.test_transform, resize=self.size)
 
         def collate_fn(batch):
@@ -226,11 +247,11 @@ if __name__ == "__main__":
     if not os.path.isdir(saved_dir):
         os.mkdir(saved_dir)
 
-    # custom_model = Deeplabv3resnext50_32x4d()
-    # device = "cuda" if torch.cuda.is_available() else "cpu"
-    # model_path = '/opt/ml/code/saved/deeplabv3_resnext50_32x4d_cosine_annealing_constant.pt'
-    # checkpoint = torch.load(model_path, map_location=device)
-    # custom_model.load_state_dict(checkpoint)
+    custom_model = SwinTransformerBase()
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model_path = '/opt/ml/code/saved/mIoU_swin_transformer_base_512.pt'
+    checkpoint = torch.load(model_path, map_location=device)
+    custom_model.load_state_dict(checkpoint)
 
 
 
@@ -248,7 +269,7 @@ if __name__ == "__main__":
 
     ## stepLR
     stepLR_arg = dict(
-        step_size = 378*2,
+        step_size = 400*2,
         gamma = 0.7
 
     )
@@ -291,29 +312,30 @@ if __name__ == "__main__":
     opt = AdamW
 
     config = dict(
-        num_epochs=50,
-        model='swin_transformer_base',
+        num_epochs=15,
+        model='swin_transformer_small',
         criterion=criterion,
         optimizer=opt,
-        batch_size=7,
+        batch_size=10,
         learning_rate=2e-04,
         weight_decay=1e-02,
-        # saved_dir="swin_base_512_stepRL",
-        saved_dir = 'swin_transformer_base_512',
+
+        saved_dir = 'swin_Small_all_data_pseudolabel',
         save_step=1,
-        train_dir="/opt/ml/input/data/train.json",
+        train_dir="/opt/ml/input/data/train_all.json",
         val_dir="/opt/ml/input/data/val.json",
         train_transform=train_transform,
         test_transform = test_transform,
         # resize = 512,
         random_seed = 42,
-        scheduler = scheduler
+        scheduler = scheduler,
+
+        # accumulation_step = 5,
+        # print_train_step = 35,
 
     )
 
     with wandb.init(project="Semantic_Segmentation", config=config):
-        # access all HPs through wandb.config, so logging matches execution!
-        # config = wandb.config
         wandb.run.name = config['saved_dir']
 
         trainer=Trainer(
