@@ -3,6 +3,8 @@ import torch
 import matplotlib.pyplot as plt
 # https://github.com/wkentaro/pytorch-fcn/blob/master/torchfcn/utils.py
 import numpy as np
+import os
+
 
 import math
 import torch
@@ -10,7 +12,8 @@ from torch.optim.lr_scheduler import _LRScheduler
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-def inference_view(model, dataset, idx, result_plot=True,confidence_plot=True, ground_truth=False): # inference_view
+def inference_view(model, dataset, idx, result_plot=True,confidence_plot=True, ground_truth=False,
+                   model_path='model_name', category = 'battery'): # inference_view
     COLORS = [
         [129, 236, 236],
         [2, 132, 227],
@@ -38,6 +41,16 @@ def inference_view(model, dataset, idx, result_plot=True,confidence_plot=True, g
     oms = torch.argmax(outs, dim=1).detach().cpu().numpy()
 
 
+    save_dir = model_path + '/' + category + '/'
+    try:
+        os.mkdir(model_path)
+    except:
+        pass
+
+    try:
+        os.mkdir(save_dir)
+    except:
+        pass
     if result_plot:
         if ground_truth:
             fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, figsize=(16, 16))
@@ -85,6 +98,10 @@ def inference_view(model, dataset, idx, result_plot=True,confidence_plot=True, g
             ax2.imshow(filtered_oms)
             ax2.grid(False)
             ax2.set_title("Predicted : {}".format(image_infos['file_name']), fontsize=15)
+    if ground_truth:
+        plt.savefig(f'{save_dir}train_{idx}_predict')
+    else:
+        plt.savefig(f"{save_dir}test_{idx}_predict")
 
     if confidence_plot:
         fig, axes = plt.subplots(nrows=3, ncols=4, figsize=(20, 10))
@@ -93,6 +110,10 @@ def inference_view(model, dataset, idx, result_plot=True,confidence_plot=True, g
             axes[i].imshow(c.detach().cpu().numpy())
             axes[i].set_title(f"{i, category_names[int(i)]}")
 
+    if ground_truth:
+        plt.savefig(f'{save_dir}train_{idx}_logits')
+    else:
+        plt.savefig(f"{save_dir}test_{idx}_logits")
     plt.show()
     return outs, oms
 
