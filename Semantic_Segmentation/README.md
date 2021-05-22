@@ -20,12 +20,12 @@
     }
 
     criterion_list = {
-    "CrossEntropyLoss": nn.CrossEntropyLoss,
-    "MSE": nn.MSELoss,
-    "FocalLoss": FocalLoss,
-    "KLDiv": nn.KLDivLoss,
-    "LabelSmoothingLoss": LabelSmoothingLoss,
-    "DiceLossWithCEE": DiceLossWithCEE
+        "CrossEntropyLoss": nn.CrossEntropyLoss,
+        "MSE": nn.MSELoss,
+        "FocalLoss": FocalLoss,
+        "KLDiv": nn.KLDivLoss,
+        "LabelSmoothingLoss": LabelSmoothingLoss,
+        "DiceLossWithCEE": DiceLossWithCEE
     }
 
     optimizer_list = {
